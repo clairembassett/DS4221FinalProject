@@ -1,0 +1,6 @@
+# One Wikipedia title or URL per line
+https://en.wikipedia.org/wiki/University_of_Virginia
+https://en.wikipedia.org/wiki/University_of_North_Carolina_at_Chapel_Hill
+https://en.wikipedia.org/wiki/University_of_Maryland,_College_Park
+https://en.wikipedia.org/wiki/Rutgers_University
+https://en.wikipedia.org/wiki/Virginia_Tech
