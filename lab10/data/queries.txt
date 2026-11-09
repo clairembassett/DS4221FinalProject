@@ -1,0 +1,40 @@
+how do B+ tree indexes support range queries on disk
+buffer pool page replacement policies for database caching
+write-ahead logging and crash recovery in transactional databases
+multiversion concurrency control and snapshot isolation
+query optimization with cardinality estimation and cost models
+columnar storage formats and compression for analytical queries
+approximate nearest neighbor search for high dimensional vectors
+inverted file index for vector similarity search
+graph-based nearest neighbor search like HNSW
+retrieval-augmented generation for large language models
+evaluating retrieval quality with recall and mean reciprocal rank
+chunking documents for embedding and retrieval
+learned index structures replacing B-trees
+distributed join processing and data shuffling in Spark
+MapReduce for large scale data processing
+fault tolerance in distributed data processing systems
+consensus protocols and replication for distributed databases
+log-structured merge trees for write-heavy workloads
+key-value stores on commodity hardware at scale
+graph databases and property graph query languages
+knowledge graphs for question answering
+recommender systems using collaborative filtering
+dense passage retrieval with dual encoders
+sentence embeddings for semantic similarity
+data lakehouse architectures with open table formats
+transaction processing on modern hardware
+adaptive query processing at runtime
+SQL query synthesis from natural language
+federated learning across many clients
+gradient boosting for tabular data
+deep learning on time series forecasting
+transformer attention mechanisms for long sequences
+privacy preserving machine learning with differential privacy
+schema matching and data integration across sources
+data cleaning and error detection in tables
+serverless computing and cloud resource scheduling
+stream processing with windowed aggregation
+compressing neural network embeddings with quantization
+hash join algorithms and memory management
+entity resolution and record linkage
