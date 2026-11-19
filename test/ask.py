@@ -3,6 +3,12 @@
     python3 ask.py "When was the University of Chicago founded?"
     python3 ask.py -k 5 "Which colleges are in Boston?"
     python3 ask.py --embedder minilm "Who founded MIT?"
+    python3 ask.py "When was the University of Virginia founded?"
+    python3 ask.py "When was the University of Michigan founded?"
+    python3 ask.py "What schools are considered the Ivy Leagues?"
+    python3 ask.py "What schools are on the West Coast?"
+    python3 ask.py "What school is furthest North?"
+    
 
 Without LLM_* environment variables this prints the assembled prompt (echo
 mode), so you can see exactly which chunks retrieval chose.
