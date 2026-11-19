@@ -1,10 +1,18 @@
 """Download Wikipedia articles about US colleges, one JSON file per college.
 
-Each college is saved as its own file in DS4221/project/documents/, named after
+Each college is saved as its own file in newrag/data/, named after
 the article title (e.g. University_of_Virginia.json). Each file holds one row
 for the `documents` table (plus the article text):
   doc_id, source, title, url, college_id, college_name, revision_id,
-  revision_timestamp, license, ingested_at, requested_title, text
+  revision_timestamp, license, ingested_at, requested_title, text,
+  infobox, infobox_text
+
+`infobox` is the grey side box at the top right of the article, as a dict of
+label -> value (for example "Motto": "Mens et Manus (Latin)"). `infobox_text`
+is the same data as "Label: value" lines, ready to embed or index. Both are
+empty when the article has no infobox.
+
+Requires: pip install requests beautifulsoup4
 
 Usage:
   # Specific colleges: one Wikipedia title or URL per line
@@ -12,7 +20,7 @@ Usage:
 
   # Many colleges: get the list from Wikidata, take a fixed random sample
   python pull_wikipedia.py --sparql --limit 600
-pytho
+
   # Save somewhere else
   python pull_wikipedia.py --sparql --limit 600 --out-dir some/other/folder
 
@@ -30,12 +38,14 @@ import time
 from urllib.parse import unquote
 
 import requests
+from bs4 import BeautifulSoup
 
 # Wikipedia asks every client to identify itself with a contact address.
 USER_AGENT = "UVA-DS-RAG-class-project (qxm6fm@virginia.edu)"
 API = "https://en.wikipedia.org/w/api.php"
 SPARQL = "https://query.wikidata.org/sparql"
-DEFAULT_OUT_DIR = os.path.join("DS4221", "project", "documents")
+# newrag/data, the folder rag/chunker.py and rag/ingest.py read by default.
+DEFAULT_OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 session = requests.Session()
 session.headers["User-Agent"] = USER_AGENT
@@ -107,6 +117,7 @@ def fetch_article(title):
     if page.get("missing") or "extract" not in page:
         return None
     rev = page["revisions"][0]
+    infobox = fetch_infobox(page["pageid"])
     return {
         "doc_id": f"wp:{page['pageid']}",
         "source": "wikipedia",
@@ -120,7 +131,59 @@ def fetch_article(title):
         "ingested_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         "requested_title": title,
         "text": page["extract"],
+        "infobox": infobox,
+        "infobox_text": "\n".join(f"{k}: {v}" for k, v in infobox.items()),
     }
+
+
+def clean_cell(cell):
+    """Turn one infobox cell into a single line of plain text."""
+    text = cell.get_text(" ", strip=True)
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+([,;:.)\]])", r"\1", text)      # "Latin )" -> "Latin)"
+    text = re.sub(r"([(\[])\s+", r"\1", text)           # "( Latin" -> "(Latin"
+    text = re.sub(r"(;\s*)+", "; ", text)               # collapse repeated separators
+    return text.strip(" ;·")
+
+
+def fetch_infobox(pageid):
+    """Return the article's infobox (the grey side box) as {label: value}."""
+    data = get_json({
+        "action": "parse",
+        "pageid": pageid,
+        "prop": "text",
+        "section": 0,                         # the infobox is in the lead section
+        "disableeditsection": 1,
+        "disablelimitreport": 1,
+        "format": "json",
+        "formatversion": 2,
+    })
+    html = data.get("parse", {}).get("text", "")
+    box = BeautifulSoup(html, "html.parser").find("table", class_="infobox")
+    if box is None:
+        return {}
+
+    # Remove footnote markers like [1], hidden text, and duplicate coordinate formats.
+    for tag in box.select("sup.reference, style, script, .noprint, .geo-nondefault, "
+                          ".geo-multi-punct, [style*='display:none']"):
+        tag.decompose()
+    # Keep line breaks and list items apart: "AAU · AITU" or "Red<br>White" -> "a; b".
+    for br in box.find_all("br"):
+        br.replace_with("; ")
+    for li in box.find_all("li"):
+        li.append("; ")
+
+    infobox = {}
+    for row in box.find_all("tr"):
+        label = row.find("th", class_="infobox-label", recursive=False)
+        value = row.find("td", class_="infobox-data", recursive=False)
+        if label is None or value is None:
+            continue                          # image, caption, or section header row
+        key, val = clean_cell(label), clean_cell(value)
+        if not key or not val:
+            continue
+        infobox[key] = f"{infobox[key]}; {val}" if key in infobox else val
+    return infobox
 
 
 def safe_filename(title):
@@ -194,7 +257,8 @@ def main():
             path = save_doc(doc, args.out_dir)
             n_sections = doc["text"].count("\n== ")
             print(f"[{i}/{len(todo)}] ok       {doc['title']} -> {os.path.basename(path)} "
-                  f"(rev {doc['revision_id']}, {len(doc['text'])} chars, {n_sections} sections)")
+                  f"(rev {doc['revision_id']}, {len(doc['text'])} chars, {n_sections} sections, "
+                  f"{len(doc['infobox'])} infobox fields)")
         time.sleep(0.5)   # be polite: one request at a time, small pause
 
 
